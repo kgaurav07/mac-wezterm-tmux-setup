@@ -254,6 +254,34 @@ if [[ "$OS" == "ubuntu" ]]; then
     sudo install /tmp/lazygit /usr/local/bin
     success "  lazygit installed"
   fi
+
+  # Set zsh as default shell — Ubuntu defaults to bash, but this whole setup uses zsh
+  if [[ "$(getent passwd "$(whoami)" | cut -d: -f7)" != "$(which zsh)" ]]; then
+    info "  Setting zsh as default shell..."
+    sudo chsh -s "$(which zsh)" "$(whoami)"
+    success "  Default shell set to zsh (takes effect on next login)"
+  else
+    success "  zsh is already the default shell"
+  fi
+
+  # Allow SSH to forward TERM so icons/colors work when connecting from Mac WezTerm
+  if ! grep -q "AcceptEnv.*TERM" /etc/ssh/sshd_config 2>/dev/null; then
+    info "  Enabling SSH TERM forwarding in sshd_config..."
+    sudo sed -i 's/AcceptEnv LANG LC_\*/AcceptEnv LANG LC_* TERM COLORTERM/' /etc/ssh/sshd_config
+    sudo systemctl reload ssh 2>/dev/null || sudo service ssh reload 2>/dev/null
+    success "  sshd: AcceptEnv updated to include TERM"
+  else
+    success "  sshd: TERM forwarding already enabled"
+  fi
+
+  # ~/.zshenv — runs before everything (even non-interactive shells and tmux sessions)
+  # Ensures TERM is correct even when SSH sets it to dumb before .zshrc loads
+  if [[ ! -f "$HOME/.zshenv" ]] || ! grep -q "TERM.*dumb" "$HOME/.zshenv"; then
+    printf '[[ -z "$TERM" || "$TERM" == "dumb" ]] && export TERM=xterm-256color\n' >> "$HOME/.zshenv"
+    success "  ~/.zshenv: TERM override added"
+  else
+    success "  ~/.zshenv: TERM override already present"
+  fi
 fi
 
 # -----------------------------------------------------------------------------
@@ -437,7 +465,7 @@ touch "$ZSHRC"
 append_if_missing() {
   local line="$1"
   local marker="$2"
-  if grep -qF "$marker" "$ZSHRC" 2>/dev/null; then
+  if grep -qE "$marker" "$ZSHRC" 2>/dev/null; then
     success "  Already in .zshrc: $marker"
   else
     echo "$line" >> "$ZSHRC"
@@ -446,18 +474,25 @@ append_if_missing() {
 }
 
 info "Updating ~/.zshrc..."
-append_if_missing 'eval "$(zoxide init zsh)"'   'zoxide init zsh'
-append_if_missing 'eval "$(starship init zsh)"' 'starship init zsh'
 
-# Add ~/.local/bin to PATH on Ubuntu (needed for fd symlink, zoxide, starship)
+# Ubuntu: PATH and env vars MUST come first — zoxide/starship init calls the binaries
+# which live in ~/.local/bin; if PATH isn't set yet they fail silently at login
 if [[ "$OS" == "ubuntu" ]]; then
+  # ~/.local/bin first — fd symlink, zoxide, and starship all live here
   append_if_missing 'export PATH="$HOME/.local/bin:$PATH"' '.local/bin'
+  # Force TERM when SSH sets it to dumb (e.g. Lima VM over SSH, nested tmux)
+  # Must be early so starship and eza render icons/colors correctly
+  append_if_missing '[[ "$TERM" == "dumb" || -z "$TERM" ]] && export TERM=xterm-256color' 'TERM.*dumb'
   # Explicit XDG dirs — fixes nvim AppImage path resolution with non-standard usernames
   append_if_missing 'export XDG_DATA_HOME="$HOME/.local/share"' 'XDG_DATA_HOME'
   append_if_missing 'export XDG_CACHE_HOME="$HOME/.cache"'      'XDG_CACHE_HOME'
   append_if_missing 'export XDG_CONFIG_HOME="$HOME/.config"'    'XDG_CONFIG_HOME'
   append_if_missing 'export XDG_STATE_HOME="$HOME/.local/state"' 'XDG_STATE_HOME'
 fi
+
+# Shell inits — after PATH so the binaries can be found
+append_if_missing 'eval "$(zoxide init zsh)"'   'zoxide init zsh'
+append_if_missing 'eval "$(starship init zsh)"' 'starship init zsh'
 
 if grep -q 'alias ls="eza' "$ZSHRC" 2>/dev/null; then
   success "  eza aliases already in .zshrc"
@@ -520,8 +555,7 @@ check_file() {
 check_zshrc_marker() {
   local label="$1"
   local marker="$2"
-  if grep -qF "$marker" "$ZSHRC" 2>/dev/null; then
-    echo -e "${GREEN}[OK]${NC}    .zshrc: $label"
+  if grep -qE "$marker" "$ZSHRC" 2>/dev/null; then
   else
     echo -e "${RED}[MISSING]${NC} .zshrc: $label not found"
     WARN_COUNT=$((WARN_COUNT + 1))
@@ -559,6 +593,20 @@ check_zshrc_marker "starship init"  "starship init zsh"
 if [[ "$OS" == "ubuntu" ]]; then
   check_zshrc_marker "~/.local/bin in PATH" ".local/bin"
   check_zshrc_marker "XDG_DATA_HOME"        "XDG_DATA_HOME"
+  check_zshrc_marker "TERM override"        "TERM.*dumb"
+  # Check zsh is default shell
+  if [[ "$(getent passwd "$(whoami)" | cut -d: -f7)" == "$(which zsh)" ]]; then
+    echo -e "${GREEN}[OK]${NC}    default shell — zsh"
+  else
+    echo -e "${YELLOW}[WARN]${NC}  default shell is not zsh — icons/starship won't load (log out and back in)"
+  fi
+  # Check zshenv TERM override
+  if [[ -f "$HOME/.zshenv" ]] && grep -q "TERM.*dumb" "$HOME/.zshenv"; then
+    echo -e "${GREEN}[OK]${NC}    ~/.zshenv TERM override present"
+  else
+    echo -e "${YELLOW}[WARN]${NC}  ~/.zshenv TERM override missing"
+    WARN_COUNT=$((WARN_COUNT + 1))
+  fi
 fi
 check_zshrc_marker "eza aliases"    'alias ls="eza'
 
