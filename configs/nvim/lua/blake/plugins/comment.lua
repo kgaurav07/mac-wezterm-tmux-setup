@@ -10,6 +10,10 @@ return {
 
     local ts_context_commentstring = require("ts_context_commentstring.integrations.comment_nvim")
 
+    require("ts_context_commentstring").setup({
+      enable_autocmd = false,
+    })
+
     -- enable comment
     comment.setup({
       -- for commenting tsx, jsx, svelte, html files
