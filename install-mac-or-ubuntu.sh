@@ -329,8 +329,17 @@ download_config_dir() {
   mkdir -p "$dest_dir"
 
   # Get all file paths under gh_path from GitHub tree API
-  local files
-  files="$(curl -fsSL "$api_url" | grep '"path"' | sed 's/.*"path": "\(.*\)".*/\1/' | grep "^${gh_path}/")"
+  # Filter to "blob" type only (exclude directory entries which would 404 on raw download)
+  local tree_json files
+  tree_json="$(curl -fsSL "$api_url")"
+  files="$(echo "$tree_json" \
+    | python3 -c "
+import sys, json
+tree = json.load(sys.stdin)
+for item in tree.get('tree', []):
+    if item.get('type') == 'blob' and item['path'].startswith('${gh_path}/'):
+        print(item['path'])
+")"
 
   if [[ -z "$files" ]]; then
     warn "  No files found for $gh_path — skipping"
