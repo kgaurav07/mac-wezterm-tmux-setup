@@ -154,8 +154,17 @@ if [[ "$OS" == "ubuntu" ]]; then
   if command -v nvim &>/dev/null; then
     success "  nvim — already installed"
   else
-    info "  Installing nvim via snap..."
-    sudo snap install nvim --classic
+    info "  Installing nvim via AppImage..."
+    # AppImage avoids snap confinement bugs with non-standard usernames/home dirs
+    NVIM_ARCH="$(uname -m)"
+    case "$NVIM_ARCH" in
+      x86_64)  NVIM_FILE="nvim-linux-x86_64.appimage" ;;
+      aarch64) NVIM_FILE="nvim-linux-arm64.appimage" ;;
+      *)       NVIM_FILE="nvim-linux-x86_64.appimage" ;;
+    esac
+    curl -fsSL "https://github.com/neovim/neovim/releases/latest/download/${NVIM_FILE}" -o /tmp/nvim.appimage
+    chmod +x /tmp/nvim.appimage
+    sudo mv /tmp/nvim.appimage /usr/local/bin/nvim
     success "  nvim installed"
   fi
 
@@ -401,6 +410,11 @@ append_if_missing 'export PATH'                 'export PATH'
 # Add ~/.local/bin to PATH on Ubuntu (needed for fd alias, zoxide, starship)
 if [[ "$OS" == "ubuntu" ]]; then
   append_if_missing 'export PATH="$HOME/.local/bin:$PATH"' '.local/bin'
+  # Explicit XDG dirs — fixes nvim AppImage path resolution with non-standard usernames
+  append_if_missing 'export XDG_DATA_HOME="$HOME/.local/share"' 'XDG_DATA_HOME'
+  append_if_missing 'export XDG_CACHE_HOME="$HOME/.cache"'      'XDG_CACHE_HOME'
+  append_if_missing 'export XDG_CONFIG_HOME="$HOME/.config"'    'XDG_CONFIG_HOME'
+  append_if_missing 'export XDG_STATE_HOME="$HOME/.local/state"' 'XDG_STATE_HOME'
 fi
 
 if grep -q 'alias ls="eza' "$ZSHRC" 2>/dev/null; then
