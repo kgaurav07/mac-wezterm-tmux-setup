@@ -73,7 +73,7 @@ Press `Ctrl+B T` → a fuzzy search popup lets you jump to any project instantly
 **Zoxide** feeds sesh the list of directories it knows.
 The more you `cd` around, the more zoxide learns, and the more sesh can show you.
 
-> See: [zoxide.md](zoxide.md) | sesh.md (coming soon)
+> See: [zoxide.md](zoxide.md) | [sesh.md](sesh.md)
 
 ---
 
@@ -82,7 +82,7 @@ The more you `cd` around, the more zoxide learns, and the more sesh can show you
 Neovim is a terminal-based code editor. It runs inside a tmux pane.
 It has its own splits, file navigation, and keybindings.
 
-> See: nvim.md (coming soon)
+> See: [nvim.md](nvim.md)
 
 ---
 
@@ -144,11 +144,12 @@ Ctrl+B  m           →  maximize/restore current pane
 | [zoxide.md](zoxide.md) | Smart `cd`, `z`, `zi`, adding/removing directories |
 | [tmux.md](tmux.md) | Sessions, panes, splits, copy mode, sesh integration |
 | [sesh.md](sesh.md) | Session picker, project jumping, sesh.toml |
-| [fd.md](fd.md) | Fast file finder — powers sesh `Ctrl+F`, OneDrive search |
+| [fd.md](fd.md) | Fast file finder — powers sesh `Ctrl+F`, external drive search |
 | [fzf.md](fzf.md) | Fuzzy finder — powers the sesh picker and `zi` |
 | [eza.md](eza.md) | Enhanced `ls` with icons, tree views, git status |
 | [starship.md](starship.md) | Shell prompt — git branch, language versions, exit codes |
 | [nvim.md](nvim.md) | Editor modes, file explorer, Telescope, LSP, git |
+| [lua.md](lua.md) | Lua basics for reading/editing nvim config files |
 
 ---
 
@@ -191,5 +192,4 @@ export PATH                  # ensures tmux inherits full PATH
 | nvim | `~/.config/nvim/` |
 | zsh shell | `~/.zshrc` |
 
-All configs (except zshrc) are **symlinked** from the dotfiles repo at:
-`cca-blake-public-dotfiles/`
+All configs are copied by `install.sh` from the `configs/` folder in this repo into `~/.config/` on your machine.

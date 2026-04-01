@@ -13,10 +13,10 @@ In this setup, it powers the `Ctrl+F` shortcut inside the sesh picker.
 When you press `Ctrl+F` inside the sesh picker, it runs:
 
 ```bash
-fd -H -d 2 -t d -E .Trash . ~ ~/Library/CloudStorage/OneDrive-SAPSE
+fd -H -d 2 -t d -E .Trash .
 ```
 
-This scans your Mac and OneDrive for directories, so you can jump to any project — even ones
+This scans your home directory for folders, so you can jump to any project — even ones
 zoxide doesn't know about yet.
 
 ### Flag breakdown
@@ -27,24 +27,24 @@ zoxide doesn't know about yet.
 | `-d 2` | Search only 2 levels deep |
 | `-t d` | Find directories only (not files) |
 | `-E .Trash` | Exclude the Trash folder |
-| `.` | Search from the current directory |
-| `~` | Also search your home directory |
-| `~/Library/CloudStorage/OneDrive-SAPSE` | Also search OneDrive |
+| `.` | Search from home directory |
 
-### Why two separate search roots?
+### Adding extra search roots
 
-OneDrive is 4 folders deep from `~`, so `fd -d 2 .` would never reach it.
-By listing it as its own root, each path gets its own 2-level search:
+If your projects live deep in a cloud storage folder or external drive (more than 2 levels from `~`),
+add it as an extra search root so it gets its own 2-level search:
 
+```bash
+fd -H -d 2 -t d -E .Trash . ~/my-cloud-drive
 ```
-Search 1:  ~ (depth 2)
-           → ~/Downloads
-           → ~/Desktop
-           → ~/Documents
 
-Search 2:  ~/Library/CloudStorage/OneDrive-SAPSE (depth 2)
-           → ~/Library/CloudStorage/OneDrive-SAPSE/00_code2
-           → ~/Library/CloudStorage/OneDrive-SAPSE/01_docs
+Each root is searched independently at depth 2 — so the extra path doesn't force you
+to increase the global depth limit.
+
+To make this permanent, edit `~/.config/tmux/tmux.conf` and update the `ctrl-f` bind line:
+
+```bash
+--bind 'ctrl-f:change-prompt(  )+reload(fd -H -d 2 -t d -E .Trash . ~/my-cloud-drive)'
 ```
 
 ---
@@ -87,7 +87,10 @@ fd -H -d 3 "project"
 
 ```
 # How sesh uses fd (Ctrl+F in the picker):
-fd -H -d 2 -t d -E .Trash . ~ ~/Library/CloudStorage/OneDrive-SAPSE
+fd -H -d 2 -t d -E .Trash .
+
+# With an extra search root (e.g. cloud storage or external drive):
+fd -H -d 2 -t d -E .Trash . ~/my-cloud-drive
 
 # Find directories named "project"
 fd -t d "project" ~

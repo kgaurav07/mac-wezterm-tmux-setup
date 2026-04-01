@@ -39,14 +39,14 @@ These are already set up in `~/.zshrc`. You can use them immediately:
 ## What the Columns Mean (in `ll` / `la`)
 
 ```
-drwxr-xr-x  blake  staff   4.0k  Jan 15  nvim/
-.rw-r--r--  blake  staff   1.2k  Jan 15  README.md
+drwxr-xr-x  user  staff   4.0k  Jan 15  nvim/
+.rw-r--r--  user  staff   1.2k  Jan 15  README.md
 ```
 
 | Column | Meaning |
 |--------|---------|
 | `drwxr-xr-x` | Permissions (`d` = directory, `-` = file) |
-| `blake` | Owner |
+| `user` | Owner (your macOS username) |
 | `staff` | Group |
 | `4.0k` | Size (human-readable) |
 | `Jan 15` | Last modified date |

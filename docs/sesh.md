@@ -70,7 +70,7 @@ Use `Ctrl+B L` to instantly toggle back to your previous session.
 `Ctrl+F` uses `fd` to search your filesystem. The command it runs:
 
 ```bash
-fd -H -d 2 -t d -E .Trash . ~ ~/Library/CloudStorage/OneDrive-SAPSE
+fd -H -d 2 -t d -E .Trash .
 ```
 
 | Part | Meaning |
@@ -79,10 +79,10 @@ fd -H -d 2 -t d -E .Trash . ~ ~/Library/CloudStorage/OneDrive-SAPSE
 | `-d 2` | Only 2 levels deep from each search root |
 | `-t d` | Directories only (not files) |
 | `-E .Trash` | Exclude Trash |
-| `~` | Search home directory |
-| `~/Library/CloudStorage/OneDrive-SAPSE` | Search OneDrive too |
+| `.` | Search from home directory |
 
-> Each path is searched independently at depth 2 — so OneDrive gets its own 2-level search without needing to increase the global depth.
+> You can add extra search roots for deep locations (e.g. external drives, cloud storage folders).
+> Add them as additional paths after `.` — each gets its own 2-level search independently.
 
 > `fd` must be installed: `brew install fd` (3MB)
 
@@ -100,7 +100,7 @@ startup_command = "nvim ."
 ```
 
 File location: `~/.config/sesh/sesh.toml`
-(symlinked from dotfiles repo: `cca-blake-public-dotfiles/sesh/sesh.toml`)
+(copied from `configs/sesh/sesh.toml.template` in the repo by `install.sh`)
 
 Current configured sessions:
 - **Downloads** — `~/Downloads`, runs `ls`
@@ -142,4 +142,4 @@ Inside picker:
 
 Next up: **nvim** — the editor. Open it with `nvim .` inside any project session.
 
-See: `mysetup/nvim.md` (coming later)
+See: [nvim.md](nvim.md)

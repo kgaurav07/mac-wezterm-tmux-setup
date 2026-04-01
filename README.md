@@ -61,6 +61,7 @@ mac-wezterm-tmux-setup/
         ├── tmux.md
         ├── sesh.md
         ├── nvim.md
+        ├── lua.md
         ├── fd.md
         ├── fzf.md
         ├── eza.md

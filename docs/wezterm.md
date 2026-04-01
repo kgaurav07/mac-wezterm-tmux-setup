@@ -119,4 +119,4 @@ WezTerm intercepts `Cmd+key` and sends the right sequence to nvim.
 Once you're comfortable here, the next step is installing **zoxide** — a smarter `cd` command
 that remembers your directories. This is the foundation for using `sesh` (session manager).
 
-See: `mysetup/zoxide.md` (created after Phase 1)
+See: [zoxide.md](zoxide.md)
