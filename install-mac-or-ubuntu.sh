@@ -127,7 +127,7 @@ if [[ "$OS" == "ubuntu" ]]; then
   sudo apt update -qq
 
   # Core tools available in apt
-  APT_TOOLS=(tmux fzf curl git unzip)
+  APT_TOOLS=(tmux fzf curl git unzip build-essential)
   info "Installing apt packages..."
   for tool in "${APT_TOOLS[@]}"; do
     if dpkg -s "$tool" &>/dev/null 2>&1; then
