@@ -148,15 +148,21 @@ if [[ "$OS" == "ubuntu" ]]; then
   done
 
   # fd — packaged as fd-find on Ubuntu, binary is fdfind
-  if command -v fdfind &>/dev/null || command -v fd &>/dev/null; then
-    success "  fd — already installed"
+  if ! command -v fd &>/dev/null; then
+    if command -v fdfind &>/dev/null; then
+      # Already installed via apt but symlink is missing — recreate it
+      mkdir -p "$HOME/.local/bin"
+      ln -sf "$(which fdfind)" "$HOME/.local/bin/fd"
+      success "  fd — symlinked fdfind → ~/.local/bin/fd"
+    else
+      info "  Installing fd-find..."
+      sudo apt install -y fd-find
+      mkdir -p "$HOME/.local/bin"
+      ln -sf "$(which fdfind)" "$HOME/.local/bin/fd"
+      success "  fd installed (symlinked fdfind → ~/.local/bin/fd)"
+    fi
   else
-    info "  Installing fd-find..."
-    sudo apt install -y fd-find
-    # Create fd symlink so scripts work as expected
-    mkdir -p "$HOME/.local/bin"
-    ln -sf "$(which fdfind)" "$HOME/.local/bin/fd"
-    success "  fd installed (symlinked fdfind → ~/.local/bin/fd)"
+    success "  fd — already installed"
   fi
 
   # nvim — AppImage avoids snap confinement bugs with non-standard usernames/home dirs
