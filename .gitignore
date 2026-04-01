@@ -1,0 +1,24 @@
+# macOS
+.DS_Store
+.DS_Store?
+._*
+
+# Editors
+*.swp
+*.swo
+*~
+
+# nvim — machine-specific, auto-generated
+configs/nvim/lazy-lock.json
+configs/nvim/.cache/
+
+# tmux — plugins are installed by TPM at runtime, not committed
+configs/tmux/plugins/
+
+# sesh — personal project paths, not committed
+# Use configs/sesh/sesh.toml.template instead
+configs/sesh/sesh.toml
+
+# Secrets / env
+.env
+.env.local
