@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
 # mac-wezterm-tmux-setup — uninstall-ubuntu.sh
-# Removes everything installed by install-mac-or-ubuntu.sh on Ubuntu.
+# Removes everything installed by install.sh on Ubuntu.
 #
 # Usage (run from Lima or any Ubuntu machine):
 #   curl -fsSL https://raw.githubusercontent.com/kgaurav07/mac-wezterm-tmux-setup/main/uninstall-ubuntu.sh | bash
@@ -260,7 +260,7 @@ if [[ $WARN_COUNT -eq 0 ]]; then
   echo -e "${GREEN}  Clean. Ready to reinstall.${NC}"
   echo ""
   echo "  Run install:"
-  echo "  curl -fsSL https://raw.githubusercontent.com/kgaurav07/mac-wezterm-tmux-setup/main/install-mac-or-ubuntu.sh | bash"
+  echo "  curl -fsSL https://raw.githubusercontent.com/kgaurav07/mac-wezterm-tmux-setup/main/install.sh | bash"
 else
   echo -e "${YELLOW}  $WARN_COUNT item(s) still present — review above.${NC}"
 fi
