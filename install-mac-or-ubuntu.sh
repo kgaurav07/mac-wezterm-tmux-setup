@@ -36,6 +36,15 @@ error()   { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIGS_DIR="$REPO_DIR/configs"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+GITHUB_RAW="https://raw.githubusercontent.com/kgaurav07/mac-wezterm-tmux-setup/main"
+
+# Detect curl | bash mode — $0 is /dev/stdin or /proc/self/fd/0, configs/ won't exist
+if [[ ! -d "$CONFIGS_DIR" ]]; then
+  CURL_MODE=true
+  info "Running via curl — will download configs from GitHub"
+else
+  CURL_MODE=false
+fi
 
 echo ""
 echo "============================================="
@@ -228,7 +237,7 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# 4. Copy configs to ~/.config/
+# 4. Copy/download configs to ~/.config/
 # -----------------------------------------------------------------------------
 copy_config() {
   local src="$1"
@@ -256,19 +265,87 @@ copy_config() {
   fi
 }
 
+# Download a single file from GitHub raw (used in curl | bash mode)
+download_config() {
+  local url="$1"
+  local dest="$2"
+
+  mkdir -p "$(dirname "$dest")"
+  if [[ -e "$dest" ]]; then
+    local tmp
+    tmp="$(mktemp)"
+    curl -fsSL "$url" -o "$tmp"
+    if diff -q "$tmp" "$dest" &>/dev/null; then
+      rm -f "$tmp"
+      success "Already up to date: $dest"
+    else
+      local backup="${dest}.backup.${TIMESTAMP}"
+      warn "Backing up existing: $dest → $backup"
+      mv "$dest" "$backup"
+      mv "$tmp" "$dest"
+      success "Updated: $dest"
+    fi
+  else
+    curl -fsSL "$url" -o "$dest"
+    success "Downloaded: $dest"
+  fi
+}
+
+# Download a directory tree from GitHub (used in curl | bash mode)
+# Uses GitHub API to list files, then downloads each one
+download_config_dir() {
+  local gh_path="$1"   # e.g. "configs/nvim"
+  local dest_dir="$2"  # e.g. "$HOME/.config/nvim"
+  local api_url="https://api.github.com/repos/kgaurav07/mac-wezterm-tmux-setup/git/trees/main?recursive=1"
+
+  info "  Downloading $gh_path → $dest_dir"
+  mkdir -p "$dest_dir"
+
+  # Get all file paths under gh_path from GitHub tree API
+  local files
+  files="$(curl -fsSL "$api_url" | grep '"path"' | sed 's/.*"path": "\(.*\)".*/\1/' | grep "^${gh_path}/")"
+
+  if [[ -z "$files" ]]; then
+    warn "  No files found for $gh_path — skipping"
+    return
+  fi
+
+  while IFS= read -r file_path; do
+    local rel="${file_path#${gh_path}/}"
+    local dest_file="$dest_dir/$rel"
+    mkdir -p "$(dirname "$dest_file")"
+    curl -fsSL "${GITHUB_RAW}/${file_path}" -o "$dest_file"
+  done <<< "$files"
+
+  success "Downloaded: $dest_dir"
+}
+
 info "Copying configs to ~/.config/..."
 mkdir -p "$HOME/.config"
 
-copy_config "$CONFIGS_DIR/nvim"                   "$HOME/.config/nvim"
-copy_config "$CONFIGS_DIR/tmux/tmux.conf"         "$HOME/.config/tmux/tmux.conf"
-copy_config "$CONFIGS_DIR/wezterm/wezterm.lua"     "$HOME/.config/wezterm/wezterm.lua"
-mkdir -p "$HOME/.config/sesh"
-
-if [[ -f "$HOME/.config/sesh/sesh.toml" ]]; then
-  success "sesh.toml already exists — leaving your personal sessions untouched"
+if [[ "$CURL_MODE" == true ]]; then
+  # Download mode — fetch from GitHub raw
+  download_config_dir "configs/nvim"     "$HOME/.config/nvim"
+  download_config     "${GITHUB_RAW}/configs/tmux/tmux.conf"   "$HOME/.config/tmux/tmux.conf"
+  download_config     "${GITHUB_RAW}/configs/wezterm/wezterm.lua" "$HOME/.config/wezterm/wezterm.lua"
+  mkdir -p "$HOME/.config/sesh"
+  if [[ -f "$HOME/.config/sesh/sesh.toml" ]]; then
+    success "sesh.toml already exists — leaving your personal sessions untouched"
+  else
+    download_config "${GITHUB_RAW}/configs/sesh/sesh.toml.template" "$HOME/.config/sesh/sesh.toml"
+  fi
 else
-  cp "$CONFIGS_DIR/sesh/sesh.toml.template" "$HOME/.config/sesh/sesh.toml"
-  success "Copied sesh.toml.template → ~/.config/sesh/sesh.toml"
+  # Local mode — copy from repo directory
+  copy_config "$CONFIGS_DIR/nvim"               "$HOME/.config/nvim"
+  copy_config "$CONFIGS_DIR/tmux/tmux.conf"     "$HOME/.config/tmux/tmux.conf"
+  copy_config "$CONFIGS_DIR/wezterm/wezterm.lua" "$HOME/.config/wezterm/wezterm.lua"
+  mkdir -p "$HOME/.config/sesh"
+  if [[ -f "$HOME/.config/sesh/sesh.toml" ]]; then
+    success "sesh.toml already exists — leaving your personal sessions untouched"
+  else
+    cp "$CONFIGS_DIR/sesh/sesh.toml.template" "$HOME/.config/sesh/sesh.toml"
+    success "Copied sesh.toml.template → ~/.config/sesh/sesh.toml"
+  fi
 fi
 
 # -----------------------------------------------------------------------------
