@@ -8,6 +8,10 @@
 #         (WezTerm and fonts are skipped — GUI tools, install separately on host)
 #
 # Usage:
+#   # Via curl (no clone needed):
+#   curl -fsSL https://raw.githubusercontent.com/kgaurav07/mac-wezterm-tmux-setup/main/install-mac-or-ubuntu.sh | bash
+#
+#   # Or clone and run locally:
 #   git clone https://github.com/kgaurav07/mac-wezterm-tmux-setup
 #   cd mac-wezterm-tmux-setup
 #   chmod +x install-mac-or-ubuntu.sh
@@ -123,10 +127,15 @@ fi
 
 # --- Ubuntu: use apt + targeted installers ---
 if [[ "$OS" == "ubuntu" ]]; then
+  # Ensure ~/.local/bin is in PATH for this script run
+  # (zoxide, starship, fd installers dump binaries there)
+  export PATH="$HOME/.local/bin:$PATH"
+
   info "Updating apt..."
   sudo apt update -qq
 
   # Core tools available in apt
+  # build-essential (gcc + make) is required for telescope-fzf-native.nvim to compile libfzf.so
   APT_TOOLS=(tmux fzf curl git unzip build-essential)
   info "Installing apt packages..."
   for tool in "${APT_TOOLS[@]}"; do
@@ -144,18 +153,17 @@ if [[ "$OS" == "ubuntu" ]]; then
   else
     info "  Installing fd-find..."
     sudo apt install -y fd-find
-    # Create fd alias so scripts work as expected
+    # Create fd symlink so scripts work as expected
     mkdir -p "$HOME/.local/bin"
     ln -sf "$(which fdfind)" "$HOME/.local/bin/fd"
-    success "  fd installed (aliased fdfind → fd)"
+    success "  fd installed (symlinked fdfind → ~/.local/bin/fd)"
   fi
 
-  # nvim — snap gives the latest stable version
+  # nvim — AppImage avoids snap confinement bugs with non-standard usernames/home dirs
   if command -v nvim &>/dev/null; then
     success "  nvim — already installed"
   else
     info "  Installing nvim via AppImage..."
-    # AppImage avoids snap confinement bugs with non-standard usernames/home dirs
     NVIM_ARCH="$(uname -m)"
     case "$NVIM_ARCH" in
       x86_64)  NVIM_FILE="nvim-linux-x86_64.appimage" ;;
@@ -168,7 +176,7 @@ if [[ "$OS" == "ubuntu" ]]; then
     success "  nvim installed"
   fi
 
-  # zoxide — official install script
+  # zoxide — official install script (installs to ~/.local/bin)
   if command -v zoxide &>/dev/null; then
     success "  zoxide — already installed"
   else
@@ -177,24 +185,24 @@ if [[ "$OS" == "ubuntu" ]]; then
     success "  zoxide installed"
   fi
 
-  # eza — via Homebrew on Linux (most reliable) or cargo
+  # eza — official apt repo (most reliable on Ubuntu without brew/cargo)
   if command -v eza &>/dev/null; then
     success "  eza — already installed"
   else
-    # Try Homebrew on Linux first, fall back to cargo
-    if command -v brew &>/dev/null; then
-      info "  Installing eza via Homebrew..."
-      brew install eza
-    elif command -v cargo &>/dev/null; then
-      info "  Installing eza via cargo..."
-      cargo install eza
-    else
-      warn "  eza: neither Homebrew nor cargo found. Install manually: cargo install eza"
-    fi
-    command -v eza &>/dev/null && success "  eza installed"
+    info "  Installing eza via apt (official eza repo)..."
+    sudo apt install -y gpg wget
+    sudo mkdir -p /etc/apt/keyrings
+    wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc \
+      | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" \
+      | sudo tee /etc/apt/sources.list.d/gierens.list > /dev/null
+    sudo chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list
+    sudo apt update -qq
+    sudo apt install -y eza
+    success "  eza installed"
   fi
 
-  # starship — official install script
+  # starship — official install script (installs to ~/.local/bin or /usr/local/bin)
   if command -v starship &>/dev/null; then
     success "  starship — already installed"
   else
@@ -203,30 +211,40 @@ if [[ "$OS" == "ubuntu" ]]; then
     success "  starship installed"
   fi
 
-  # sesh — via Homebrew on Linux or go install
+  # sesh — download prebuilt binary from GitHub releases (no brew/Go needed)
   if command -v sesh &>/dev/null; then
     success "  sesh — already installed"
   else
-    if command -v brew &>/dev/null; then
-      info "  Installing sesh via Homebrew..."
-      brew install sesh
-      success "  sesh installed"
-    elif command -v go &>/dev/null; then
-      info "  Installing sesh via go..."
-      go install github.com/joshmedeski/sesh/v2@latest
-      success "  sesh installed"
-    else
-      warn "  sesh: install Homebrew (https://brew.sh) or Go, then run: brew install sesh"
-    fi
+    info "  Installing sesh..."
+    SESH_ARCH="$(uname -m)"
+    case "$SESH_ARCH" in
+      x86_64)  SESH_FILE="sesh_Linux_x86_64.tar.gz" ;;
+      aarch64) SESH_FILE="sesh_Linux_arm64.tar.gz" ;;
+      *)       SESH_FILE="sesh_Linux_x86_64.tar.gz" ;;
+    esac
+    SESH_VERSION=$(curl -s "https://api.github.com/repos/joshmedeski/sesh/releases/latest" \
+      | grep '"tag_name"' | sed 's/.*"v\([^"]*\)".*/\1/')
+    curl -sSfL "https://github.com/joshmedeski/sesh/releases/latest/download/${SESH_FILE}" \
+      | tar -xz -C /tmp sesh
+    sudo install /tmp/sesh /usr/local/bin
+    success "  sesh installed"
   fi
 
-  # lazygit — official install
+  # lazygit — official install, arch-aware
   if command -v lazygit &>/dev/null; then
     success "  lazygit — already installed"
   else
     info "  Installing lazygit..."
-    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep '"tag_name"' | sed 's/.*"v\([^"]*\)".*/\1/')
-    curl -sSfL "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" | tar -xz -C /tmp lazygit
+    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" \
+      | grep '"tag_name"' | sed 's/.*"v\([^"]*\)".*/\1/')
+    LAZYGIT_ARCH="$(uname -m)"
+    case "$LAZYGIT_ARCH" in
+      x86_64)  LG_FILE="lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" ;;
+      aarch64) LG_FILE="lazygit_${LAZYGIT_VERSION}_Linux_arm64.tar.gz" ;;
+      *)       LG_FILE="lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" ;;
+    esac
+    curl -sSfL "https://github.com/jesseduffield/lazygit/releases/latest/download/${LG_FILE}" \
+      | tar -xz -C /tmp lazygit
     sudo install /tmp/lazygit /usr/local/bin
     success "  lazygit installed"
   fi
@@ -359,16 +377,28 @@ fi
 
 # -----------------------------------------------------------------------------
 # 5. Patch tmux.conf clipboard command for Ubuntu
-#    macOS uses pbcopy; Ubuntu uses xclip (X11) or wl-copy (Wayland)
+#    macOS uses pbcopy; headless Ubuntu has no clipboard (remove the lines);
+#    desktop Ubuntu uses xclip (X11) or wl-copy (Wayland)
 # -----------------------------------------------------------------------------
 TMUX_CONF="$HOME/.config/tmux/tmux.conf"
 
 if [[ "$OS" == "ubuntu" ]]; then
-  if [[ -n "${WAYLAND_DISPLAY}" ]]; then
+  if [[ "$IS_HEADLESS" == true ]]; then
+    # No display available — clipboard paste over SSH is not supported
+    # Remove pbcopy lines rather than leaving broken references
+    if grep -q "pbcopy" "$TMUX_CONF"; then
+      sed -i '/pbcopy/d' "$TMUX_CONF"
+      info "tmux.conf: removed pbcopy lines (headless — clipboard not available over SSH)"
+    fi
+  elif [[ -n "${WAYLAND_DISPLAY}" ]]; then
     CLIPBOARD_CMD="wl-copy"
     if ! command -v wl-copy &>/dev/null; then
       info "Installing wl-clipboard for Wayland..."
       sudo apt install -y wl-clipboard
+    fi
+    if grep -q "pbcopy" "$TMUX_CONF"; then
+      sed -i "s|pbcopy|$CLIPBOARD_CMD|g" "$TMUX_CONF"
+      success "tmux.conf: replaced pbcopy → $CLIPBOARD_CMD"
     fi
   else
     CLIPBOARD_CMD="xclip -selection clipboard"
@@ -376,12 +406,10 @@ if [[ "$OS" == "ubuntu" ]]; then
       info "Installing xclip for X11..."
       sudo apt install -y xclip
     fi
-  fi
-
-  # Replace pbcopy with the appropriate clipboard command
-  if grep -q "pbcopy" "$TMUX_CONF"; then
-    sed -i "s|pbcopy|$CLIPBOARD_CMD|g" "$TMUX_CONF"
-    success "tmux.conf: replaced pbcopy → $CLIPBOARD_CMD"
+    if grep -q "pbcopy" "$TMUX_CONF"; then
+      sed -i "s|pbcopy|$CLIPBOARD_CMD|g" "$TMUX_CONF"
+      success "tmux.conf: replaced pbcopy → $CLIPBOARD_CMD"
+    fi
   fi
 fi
 
@@ -405,9 +433,8 @@ append_if_missing() {
 info "Updating ~/.zshrc..."
 append_if_missing 'eval "$(zoxide init zsh)"'   'zoxide init zsh'
 append_if_missing 'eval "$(starship init zsh)"' 'starship init zsh'
-append_if_missing 'export PATH'                 'export PATH'
 
-# Add ~/.local/bin to PATH on Ubuntu (needed for fd alias, zoxide, starship)
+# Add ~/.local/bin to PATH on Ubuntu (needed for fd symlink, zoxide, starship)
 if [[ "$OS" == "ubuntu" ]]; then
   append_if_missing 'export PATH="$HOME/.local/bin:$PATH"' '.local/bin'
   # Explicit XDG dirs — fixes nvim AppImage path resolution with non-standard usernames
@@ -440,7 +467,106 @@ EOF
 fi
 
 # -----------------------------------------------------------------------------
-# 7. Print manual steps
+# 7. Post-install validation
+# -----------------------------------------------------------------------------
+echo ""
+echo "============================================="
+echo "  Post-install validation"
+echo "============================================="
+
+WARN_COUNT=0
+
+check_binary() {
+  local name="$1"
+  local cmd="$2"
+  local version_flag="${3:---version}"
+  local result
+  if result=$(command -v "$cmd" 2>/dev/null); then
+    local ver
+    ver=$("$cmd" $version_flag 2>&1 | head -1) || ver="(version check failed)"
+    echo -e "${GREEN}[OK]${NC}    $name — $ver"
+  else
+    echo -e "${RED}[MISSING]${NC} $name — not found in PATH"
+    WARN_COUNT=$((WARN_COUNT + 1))
+  fi
+}
+
+check_file() {
+  local label="$1"
+  local path="$2"
+  if [[ -e "$path" ]]; then
+    echo -e "${GREEN}[OK]${NC}    $label — $path"
+  else
+    echo -e "${RED}[MISSING]${NC} $label — $path not found"
+    WARN_COUNT=$((WARN_COUNT + 1))
+  fi
+}
+
+check_zshrc_marker() {
+  local label="$1"
+  local marker="$2"
+  if grep -qF "$marker" "$ZSHRC" 2>/dev/null; then
+    echo -e "${GREEN}[OK]${NC}    .zshrc: $label"
+  else
+    echo -e "${RED}[MISSING]${NC} .zshrc: $label not found"
+    WARN_COUNT=$((WARN_COUNT + 1))
+  fi
+}
+
+# Binaries — check in PATH including ~/.local/bin (already exported above for Ubuntu)
+check_binary "tmux"     tmux     "-V"
+check_binary "nvim"     nvim     "--version"
+check_binary "fzf"      fzf      "--version"
+check_binary "fd"       fd       "--version"
+check_binary "lazygit"  lazygit  "--version"
+check_binary "sesh"     sesh     "--version"
+check_binary "eza"      eza      "--version"
+check_binary "starship" starship "--version"
+check_binary "zoxide"   zoxide   "--version"
+
+# Configs
+check_file "nvim config"    "$HOME/.config/nvim/init.lua"
+check_file "tmux config"    "$HOME/.config/tmux/tmux.conf"
+check_file "sesh config"    "$HOME/.config/sesh/sesh.toml"
+check_file "TPM"            "$HOME/.config/tmux/plugins/tpm"
+
+# telescope-fzf-native compiled library
+LIBFZF="$HOME/.local/share/nvim/lazy/telescope-fzf-native.nvim/build/libfzf.so"
+if [[ -f "$LIBFZF" ]]; then
+  echo -e "${GREEN}[OK]${NC}    telescope-fzf-native compiled (libfzf.so)"
+else
+  echo -e "${YELLOW}[WARN]${NC}  telescope-fzf-native not yet compiled — will build on first nvim launch"
+fi
+
+# .zshrc markers
+check_zshrc_marker "zoxide init"    "zoxide init zsh"
+check_zshrc_marker "starship init"  "starship init zsh"
+if [[ "$OS" == "ubuntu" ]]; then
+  check_zshrc_marker "~/.local/bin in PATH" ".local/bin"
+  check_zshrc_marker "XDG_DATA_HOME"        "XDG_DATA_HOME"
+fi
+check_zshrc_marker "eza aliases"    'alias ls="eza'
+
+# nvim headless smoke-test — catches Lua/plugin config errors
+echo -n "  Checking nvim headless launch..."
+NVIM_OUT=$(nvim --headless -c "lua print('nvim-ok')" -c "qa" 2>&1 || true)
+if echo "$NVIM_OUT" | grep -q "nvim-ok"; then
+  echo -e "\r${GREEN}[OK]${NC}    nvim headless launch — no errors"
+else
+  echo -e "\r${YELLOW}[WARN]${NC}  nvim headless launch produced output:"
+  echo "$NVIM_OUT" | head -5 | sed 's/^/          /'
+  WARN_COUNT=$((WARN_COUNT + 1))
+fi
+
+echo ""
+if [[ $WARN_COUNT -eq 0 ]]; then
+  echo -e "${GREEN}  All checks passed.${NC}"
+else
+  echo -e "${YELLOW}  $WARN_COUNT check(s) failed — see above.${NC}"
+fi
+
+# -----------------------------------------------------------------------------
+# 8. Print manual steps
 # -----------------------------------------------------------------------------
 echo ""
 echo "============================================="
@@ -463,7 +589,9 @@ echo "     Wait for 'Done', then press Escape."
 echo ""
 echo "  $([ "$OS" == "macos" ] && echo 3 || echo 2). Open nvim — plugins install automatically:"
 echo "     nvim ."
-echo "     Wait for lazy.nvim to finish, then restart nvim."
+echo "     Wait for lazy.nvim to finish (may take 1-2 min on first run)."
+echo "     telescope-fzf-native will compile libfzf.so during this step."
+echo "     Restart nvim once complete — no errors should appear."
 echo ""
 echo "  $([ "$OS" == "macos" ] && echo 4 || echo 3). Reload your shell:"
 echo "     source ~/.zshrc"
