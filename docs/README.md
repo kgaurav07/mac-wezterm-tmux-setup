@@ -192,4 +192,4 @@ export PATH                  # ensures tmux inherits full PATH
 | zsh shell | `~/.zshrc` |
 
 All configs (except zshrc) are **symlinked** from the dotfiles repo at:
-`~/Library/CloudStorage/OneDrive-SAPSE/00_code2/03_OnlineRepos/cca-blake-public-dotfiles/`
+`cca-blake-public-dotfiles/`
