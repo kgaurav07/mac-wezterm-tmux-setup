@@ -95,7 +95,7 @@ mac-wezterm-tmux-setup/
 ## Learn the Tools
 
 See `mysetup/docs/` for step-by-step guides on every tool.
-Start with [`mysetup/docs/README.md`](mysetup/docs/README.md) for the big picture.
+Start with [`mysetup/docs/README.md`](docs/README.md) for the big picture.
 
 ---
 
