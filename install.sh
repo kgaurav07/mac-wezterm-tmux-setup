@@ -515,6 +515,14 @@ EOF
   success "  eza aliases added to .zshrc"
 fi
 
+# Fix claude-code auto-upgrade permissions (Ubuntu only)
+# npm installs claude-code as root; chown on login lets the user upgrade without sudo
+if [[ "$OS" == "ubuntu" ]]; then
+  append_if_missing \
+    'chown.*node_modules/@anthropic-ai' \
+    'sudo chown -R $(whoami) /usr/lib/node_modules/@anthropic-ai 2>/dev/null'
+fi
+
 # -----------------------------------------------------------------------------
 # 7. Post-install validation
 # -----------------------------------------------------------------------------
