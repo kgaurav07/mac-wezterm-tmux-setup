@@ -92,6 +92,21 @@ return {
 					})
 				end,
 
+				-- Custom handler for tailwindcss
+				-- Override root_dir to avoid insert_package_json filesystem scan
+				-- which deadlocks on Lima FUSE mounts
+				["tailwindcss"] = function()
+					require("lspconfig").tailwindcss.setup({
+						capabilities = require("cmp_nvim_lsp").default_capabilities(),
+						root_dir = require("lspconfig.util").root_pattern(
+							"tailwind.config.js",
+							"tailwind.config.ts",
+							"tailwind.config.cjs",
+							"postcss.config.js"
+						),
+					})
+				end,
+
 				-- Custom handler for Lua
 				["lua_ls"] = function()
 					require("lspconfig").lua_ls.setup({
